@@ -1,0 +1,5 @@
+{
+  "name": "MV Director AI",
+  "description": "An AI-powered music video storyboard generator that guides you from lyrics to video prompts in 6 steps.",
+  "requestFramePermissions": []
+}
