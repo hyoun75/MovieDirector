@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import StepIndicator from './components/StepIndicator';
 import Step1Lyrics from './components/Step1Lyrics';
 import Step2Stories from './components/Step2Stories';
@@ -9,13 +9,19 @@ import Step5DetailedStoryboard from './components/Step5DetailedStoryboard';
 import Step5ImagePrompts from './components/Step5ImagePrompts';
 import Step6VideoPrompts from './components/Step6VideoPrompts';
 import { Step, StoryOption, Character, Scene } from './types';
+import { KeyRound, Sparkles } from 'lucide-react';
 
 function App() {
+  // API Key State
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [isCheckingKey, setIsCheckingKey] = useState(true);
+
+  // App State
   const [currentStep, setCurrentStep] = useState<Step>(Step.LYRICS);
   const [maxReachedStep, setMaxReachedStep] = useState<Step>(Step.LYRICS);
   const [lang, setLang] = useState<'ko' | 'en'>('ko');
 
-  // Global State
+  // Global Content State
   const [lyrics, setLyrics] = useState('');
   const [stories, setStories] = useState<StoryOption[]>([]);
   const [selectedStoryIndex, setSelectedStoryIndex] = useState<number | null>(null);
@@ -25,6 +31,38 @@ function App() {
   const [baseScenes, setBaseScenes] = useState<Scene[]>([]);
   // State for Step 5, 6, 7 (Detailed Storyboard & Prompts)
   const [detailedScenes, setDetailedScenes] = useState<Scene[]>([]);
+
+  useEffect(() => {
+    const checkKey = async () => {
+      if (window.aistudio) {
+        try {
+          const has = await window.aistudio.hasSelectedApiKey();
+          setHasApiKey(has);
+        } catch (e) {
+          console.error("Failed to check API key:", e);
+        }
+      } else {
+        // Fallback for dev environment without aistudio wrapper
+        if (process.env.API_KEY) {
+          setHasApiKey(true);
+        }
+      }
+      setIsCheckingKey(false);
+    };
+    checkKey();
+  }, []);
+
+  const handleSelectKey = async () => {
+    if (window.aistudio) {
+      try {
+        await window.aistudio.openSelectKey();
+        // Assuming success to avoid race condition
+        setHasApiKey(true);
+      } catch (e) {
+        console.error("Failed to select API key:", e);
+      }
+    }
+  };
 
   // Navigation Handlers
   const handleStepChange = (step: Step) => {
@@ -53,9 +91,6 @@ function App() {
     // 2. Selected Story
     if (selectedStoryIndex !== null && stories[selectedStoryIndex]) {
       const s = stories[selectedStoryIndex];
-      // Use language preference for export? 
-      // For full project export, it's often better to include mostly the active language or both. 
-      // Let's stick to active language for simplicity or default fields.
       const title = lang === 'ko' ? (s.title_ko || s.title) : (s.title_en || s.title);
       const genre = lang === 'ko' ? (s.genre_ko || s.genre) : (s.genre_en || s.genre);
       const synopsis = lang === 'ko' ? (s.synopsis_ko || s.synopsis) : (s.synopsis_en || s.synopsis);
@@ -232,6 +267,43 @@ function App() {
         return null;
     }
   };
+
+  if (isCheckingKey) {
+    return (
+      <div className="h-screen bg-slate-950 flex items-center justify-center text-slate-300">
+        Initializing...
+      </div>
+    );
+  }
+
+  if (!hasApiKey) {
+    return (
+      <div className="h-screen bg-slate-950 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+        <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 p-8 rounded-2xl border border-indigo-500/30 max-w-md w-full shadow-2xl">
+          <div className="bg-indigo-600/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-indigo-500/20">
+             <KeyRound className="w-8 h-8 text-indigo-400" />
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-2">API Key Required</h1>
+          <p className="text-slate-400 mb-8">
+            To generate music video storyboards and images using advanced Gemini models, please select your Google Cloud API key.
+          </p>
+          <button
+            onClick={handleSelectKey}
+            className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-indigo-500/30 transition-all flex items-center justify-center gap-2"
+          >
+            <Sparkles className="w-5 h-5" />
+            Select API Key
+          </button>
+          <p className="mt-4 text-xs text-slate-600">
+            Ensure your project has billing enabled for Imagen & Veo usage.
+          </p>
+          <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-xs text-indigo-400 hover:underline mt-2 inline-block">
+            View Billing Documentation
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-slate-950 text-slate-100">

@@ -1,21 +1,20 @@
 
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { StoryOption, Character, Scene } from "../types";
-
-const apiKey = process.env.API_KEY || '';
-const ai = new GoogleGenAI({ apiKey });
+import { StoryOption, Character, Scene, AspectRatio, ImageModel, GeneratedImage } from "../types";
 
 const MODEL_NAME = 'gemini-2.5-flash';
 
-// Helper to validate API key
-const checkApiKey = () => {
+// Helper to validate API key and get client
+const getAiClient = () => {
+  const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    throw new Error("API Key is missing. Please check your environment variables.");
+    throw new Error("API Key is missing. Please select an API key.");
   }
+  return new GoogleGenAI({ apiKey });
 };
 
 export const generateStories = async (lyrics: string): Promise<StoryOption[]> => {
-  checkApiKey();
+  const ai = getAiClient();
   
   const responseSchema: Schema = {
     type: Type.ARRAY,
@@ -83,7 +82,7 @@ export const generateStories = async (lyrics: string): Promise<StoryOption[]> =>
 };
 
 export const generateCustomStory = async (lyrics: string, keywords: string): Promise<StoryOption> => {
-  checkApiKey();
+  const ai = getAiClient();
 
   const responseSchema: Schema = {
     type: Type.OBJECT,
@@ -141,7 +140,7 @@ export const generateCustomStory = async (lyrics: string, keywords: string): Pro
 };
 
 export const generateCharacters = async (story: StoryOption, lyrics: string): Promise<Character[]> => {
-  checkApiKey();
+  const ai = getAiClient();
 
   const responseSchema: Schema = {
     type: Type.ARRAY,
@@ -221,7 +220,7 @@ export const regenerateCharacter = async (
   userInstruction: string,
   imageBase64?: string
 ): Promise<Character> => {
-  checkApiKey();
+  const ai = getAiClient();
 
   const responseSchema: Schema = {
     type: Type.OBJECT,
@@ -319,7 +318,7 @@ export const generateStoryboard = async (
   story: StoryOption,
   characters: Character[]
 ): Promise<Scene[]> => {
-  checkApiKey();
+  const ai = getAiClient();
 
   const characterContext = characters.map(c => `${c.name} (${c.role}): ${c.visualDescription}`).join('\n');
 
@@ -391,7 +390,7 @@ export const generateDetailedStoryboard = async (
   story: StoryOption,
   characters: Character[]
 ): Promise<Scene[]> => {
-  checkApiKey();
+  const ai = getAiClient();
 
   const characterContext = characters.map(c => `${c.name} (${c.role}): ${c.visualDescription}`).join('\n');
   const baseScenesContext = baseScenes.map(s => 
@@ -468,7 +467,7 @@ export const generateDetailedStoryboard = async (
 };
 
 export const generateImagePrompts = async (scenes: Scene[], story: StoryOption): Promise<Scene[]> => {
-  checkApiKey();
+  const ai = getAiClient();
 
   const responseSchema: Schema = {
     type: Type.ARRAY,
@@ -517,7 +516,7 @@ export const generateImagePrompts = async (scenes: Scene[], story: StoryOption):
 };
 
 export const generateVideoPrompts = async (scenes: Scene[]): Promise<Scene[]> => {
-  checkApiKey();
+  const ai = getAiClient();
 
   const responseSchema: Schema = {
     type: Type.ARRAY,
@@ -561,4 +560,80 @@ export const generateVideoPrompts = async (scenes: Scene[]): Promise<Scene[]> =>
     const match = videoPrompts.find(p => p.sceneNumber === scene.sceneNumber);
     return match ? { ...scene, videoPrompt: match.videoPrompt } : scene;
   });
+};
+
+export const generateSceneImages = async (
+  scene: Scene,
+  story: StoryOption,
+  aspectRatio: AspectRatio,
+  count: number,
+  model: ImageModel,
+  referenceImages?: string[]
+): Promise<GeneratedImage[]> => {
+  const ai = getAiClient();
+
+  const generatedImages: GeneratedImage[] = [];
+
+  // Map user-friendly aspect ratio to API config
+  // Note: 21:9 is not directly supported in config, so we map to 16:9 and prompt for it
+  const configAspectRatio = aspectRatio === '21:9' ? '16:9' : aspectRatio;
+  
+  const promptText = `
+    Movie still of: ${scene.visualAction_en || scene.visualAction}
+    Mood: ${scene.moodAndLighting_en || scene.moodAndLighting}
+    Story Context: ${story.title_en || story.title}
+    
+    Style: Cinematic, High Quality, Photorealistic, Music Video Still.
+    Aspect Ratio: ${aspectRatio} (If 21:9, create a wide cinematic shot with letterboxing if needed).
+  `;
+
+  // Content parts preparation
+  const parts: any[] = [{ text: promptText }];
+  
+  if (referenceImages && referenceImages.length > 0) {
+    referenceImages.forEach(imgBase64 => {
+      // Clean base64 string if it contains data prefix
+      const base64Data = imgBase64.includes('base64,') ? imgBase64.split('base64,')[1] : imgBase64;
+      parts.push({
+        inlineData: {
+          mimeType: 'image/jpeg', // Assuming jpeg for simplicity, or could detect
+          data: base64Data
+        }
+      });
+    });
+    parts.push({ text: "Use the provided images as visual references for style/characters." });
+  }
+
+  // Generate loop for 'count' times
+  for (let i = 0; i < count; i++) {
+     try {
+       const response = await ai.models.generateContent({
+         model: model,
+         contents: { parts: parts },
+         config: {
+           imageConfig: {
+             aspectRatio: configAspectRatio,
+             // Only set imageSize for pro model
+             imageSize: model === 'gemini-3-pro-image-preview' ? '1K' : undefined
+           }
+         }
+       });
+
+       if (response.candidates?.[0]?.content?.parts) {
+         for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData && part.inlineData.data) {
+               generatedImages.push({
+                 data: part.inlineData.data,
+                 mimeType: part.inlineData.mimeType || 'image/png'
+               });
+            }
+         }
+       }
+     } catch (e) {
+       console.error(`Image gen failed for attempt ${i}`, e);
+       // Continue trying other images even if one fails
+     }
+  }
+
+  return generatedImages;
 };
