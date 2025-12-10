@@ -13,6 +13,7 @@ import { Step, StoryOption, Character, Scene } from './types';
 function App() {
   const [currentStep, setCurrentStep] = useState<Step>(Step.LYRICS);
   const [maxReachedStep, setMaxReachedStep] = useState<Step>(Step.LYRICS);
+  const [lang, setLang] = useState<'ko' | 'en'>('ko');
 
   // Global State
   const [lyrics, setLyrics] = useState('');
@@ -52,20 +53,33 @@ function App() {
     // 2. Selected Story
     if (selectedStoryIndex !== null && stories[selectedStoryIndex]) {
       const s = stories[selectedStoryIndex];
-      md += `## 2. Selected Story: ${s.title}\n\n`;
-      md += `**Genre:** ${s.genre}\n`;
-      md += `**Mood:** ${s.mood}\n`;
-      md += `**Synopsis:**\n${s.synopsis}\n\n---\n\n`;
+      // Use language preference for export? 
+      // For full project export, it's often better to include mostly the active language or both. 
+      // Let's stick to active language for simplicity or default fields.
+      const title = lang === 'ko' ? (s.title_ko || s.title) : (s.title_en || s.title);
+      const genre = lang === 'ko' ? (s.genre_ko || s.genre) : (s.genre_en || s.genre);
+      const synopsis = lang === 'ko' ? (s.synopsis_ko || s.synopsis) : (s.synopsis_en || s.synopsis);
+      
+      md += `## 2. Selected Story: ${title}\n\n`;
+      md += `**Genre:** ${genre}\n`;
+      md += `**Mood:** ${lang === 'ko' ? (s.mood_ko || s.mood) : (s.mood_en || s.mood)}\n`;
+      md += `**Synopsis:**\n${synopsis}\n\n---\n\n`;
     }
 
     // 3. Characters
     if (characters.length > 0) {
       md += `## 3. Characters\n\n`;
       characters.forEach(c => {
-        md += `### ${c.name} (${c.role})\n`;
-        md += `- **Visual:** ${c.visualDescription}\n`;
-        md += `- **Personality:** ${c.personality}\n`;
-        md += `- **Outfit:** ${c.outfit}\n\n`;
+        const name = lang === 'ko' ? (c.name_ko || c.name) : (c.name_en || c.name);
+        const role = lang === 'ko' ? (c.role_ko || c.role) : (c.role_en || c.role);
+        const visual = lang === 'ko' ? (c.visualDescription_ko || c.visualDescription) : (c.visualDescription_en || c.visualDescription);
+        const personality = lang === 'ko' ? (c.personality_ko || c.personality) : (c.personality_en || c.personality);
+        const outfit = lang === 'ko' ? (c.outfit_ko || c.outfit) : (c.outfit_en || c.outfit);
+
+        md += `### ${name} (${role})\n`;
+        md += `- **Visual:** ${visual}\n`;
+        md += `- **Personality:** ${personality}\n`;
+        md += `- **Outfit:** ${outfit}\n\n`;
       });
       md += `---\n\n`;
     }
@@ -74,10 +88,14 @@ function App() {
     if (baseScenes.length > 0) {
       md += `## 4. Base Storyboard\n\n`;
       baseScenes.forEach(s => {
+        const visual = lang === 'ko' ? (s.visualAction_ko || s.visualAction) : (s.visualAction_en || s.visualAction);
+        const mood = lang === 'ko' ? (s.moodAndLighting_ko || s.moodAndLighting) : (s.moodAndLighting_en || s.moodAndLighting);
+        const camera = lang === 'ko' ? (s.cameraMovement_ko || s.cameraMovement) : (s.cameraMovement_en || s.cameraMovement);
+
         md += `### Scene ${s.sceneNumber} (${s.estimatedDuration})\n`;
-        md += `- **Action:** ${s.visualAction}\n`;
-        md += `- **Mood:** ${s.moodAndLighting}\n`;
-        md += `- **Camera:** ${s.cameraMovement}\n`;
+        md += `- **Action:** ${visual}\n`;
+        md += `- **Mood:** ${mood}\n`;
+        md += `- **Camera:** ${camera}\n`;
         md += `- **Lyrics:** ${s.lyricsSegment}\n\n`;
       });
       md += `---\n\n`;
@@ -87,10 +105,14 @@ function App() {
     if (detailedScenes.length > 0) {
        md += `## 5-7. Detailed Storyboard & Prompts (Shooting Script)\n\n`;
        detailedScenes.forEach(s => {
+         const visual = lang === 'ko' ? (s.visualAction_ko || s.visualAction) : (s.visualAction_en || s.visualAction);
+         const mood = lang === 'ko' ? (s.moodAndLighting_ko || s.moodAndLighting) : (s.moodAndLighting_en || s.moodAndLighting);
+         const camera = lang === 'ko' ? (s.cameraMovement_ko || s.cameraMovement) : (s.cameraMovement_en || s.cameraMovement);
+
          md += `### Cut ${s.sceneNumber} (${s.estimatedDuration})\n`;
-         md += `- **Action:** ${s.visualAction}\n`;
-         md += `- **Mood:** ${s.moodAndLighting}\n`;
-         md += `- **Camera:** ${s.cameraMovement}\n`;
+         md += `- **Action:** ${visual}\n`;
+         md += `- **Mood:** ${mood}\n`;
+         md += `- **Camera:** ${camera}\n`;
          if (s.imagePrompt) {
            md += `\n**Image Prompt:**\n> ${s.imagePrompt}\n`;
          }
@@ -132,6 +154,7 @@ function App() {
       case Step.STORIES:
         return (
           <Step2Stories
+            lang={lang}
             lyrics={lyrics}
             stories={stories}
             selectedStoryIndex={selectedStoryIndex}
@@ -147,6 +170,7 @@ function App() {
         }
         return (
           <Step3Characters
+            lang={lang}
             lyrics={lyrics}
             story={stories[selectedStoryIndex]}
             characters={characters}
@@ -159,6 +183,7 @@ function App() {
         if (selectedStoryIndex === null) return null;
         return (
           <Step4Storyboard
+            lang={lang}
             lyrics={lyrics}
             story={stories[selectedStoryIndex]}
             characters={characters}
@@ -170,9 +195,9 @@ function App() {
         );
       case Step.DETAILED_STORYBOARD:
         if (selectedStoryIndex === null) return null;
-        // Step 5 takes baseScenes as input and generates detailedScenes
         return (
           <Step5DetailedStoryboard
+            lang={lang}
             story={stories[selectedStoryIndex]}
             characters={characters}
             baseScenes={baseScenes}
@@ -184,9 +209,9 @@ function App() {
         );
       case Step.IMAGE_PROMPTS:
         if (selectedStoryIndex === null) return null;
-        // Step 6 works on detailedScenes
         return (
           <Step5ImagePrompts
+            lang={lang}
             story={stories[selectedStoryIndex]}
             scenes={detailedScenes}
             setScenes={setDetailedScenes}
@@ -195,9 +220,9 @@ function App() {
           />
         );
       case Step.VIDEO_PROMPTS:
-        // Step 7 works on detailedScenes
         return (
           <Step6VideoPrompts
+            lang={lang}
             scenes={detailedScenes}
             setScenes={setDetailedScenes}
             onDownloadFull={handleDownloadFull}
@@ -214,10 +239,11 @@ function App() {
         currentStep={currentStep}
         setStep={handleStepChange}
         maxReachedStep={maxReachedStep}
+        lang={lang}
+        setLang={setLang}
       />
       
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Background Ambient Effect */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
           <div className="absolute -top-[20%] -right-[10%] w-[500px] h-[500px] bg-indigo-900/20 rounded-full blur-[100px]"></div>
           <div className="absolute top-[40%] -left-[10%] w-[400px] h-[400px] bg-purple-900/10 rounded-full blur-[100px]"></div>

@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Character, Scene, StoryOption } from '../types';
+import { Character, Scene, StoryOption, getLocalized } from '../types';
 import { generateStoryboard } from '../services/geminiService';
 import { Clapperboard, RefreshCw, Clock, Video, Download, FileText } from 'lucide-react';
 
 interface Step4StoryboardProps {
+  lang: 'ko' | 'en';
   lyrics: string;
   story: StoryOption;
   characters: Character[];
@@ -15,6 +16,7 @@ interface Step4StoryboardProps {
 }
 
 const Step4Storyboard: React.FC<Step4StoryboardProps> = ({
+  lang,
   lyrics,
   story,
   characters,
@@ -33,7 +35,7 @@ const Step4Storyboard: React.FC<Step4StoryboardProps> = ({
       const result = await generateStoryboard(lyrics, story, characters);
       setScenes(result);
     } catch (err) {
-      setError('콘티를 생성하는 중 오류가 발생했습니다.');
+      setError(lang === 'ko' ? '콘티를 생성하는 중 오류가 발생했습니다.' : 'Error generating storyboard.');
     } finally {
       setLoading(false);
     }
@@ -47,12 +49,16 @@ const Step4Storyboard: React.FC<Step4StoryboardProps> = ({
   }, []);
 
   const handleDownload = () => {
-    let md = `# Storyboard for "${story.title}"\n\n`;
+    let md = `# Storyboard for "${getLocalized(story, 'title', lang)}"\n\n`;
     scenes.forEach(s => {
+      const visual = getLocalized(s, 'visualAction', lang);
+      const mood = getLocalized(s, 'moodAndLighting', lang);
+      const camera = getLocalized(s, 'cameraMovement', lang);
+
       md += `## Scene ${s.sceneNumber} (${s.estimatedDuration})\n`;
-      md += `- **Action:** ${s.visualAction}\n`;
-      md += `- **Camera:** ${s.cameraMovement}\n`;
-      md += `- **Mood:** ${s.moodAndLighting}\n`;
+      md += `- **Action:** ${visual}\n`;
+      md += `- **Camera:** ${camera}\n`;
+      md += `- **Mood:** ${mood}\n`;
       md += `- **Lyrics:** ${s.lyricsSegment}\n\n`;
       md += `---\n\n`;
     });
@@ -72,7 +78,9 @@ const Step4Storyboard: React.FC<Step4StoryboardProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-[500px]">
         <div className="w-16 h-16 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
-        <p className="mt-6 text-xl text-slate-300 font-medium">장면 하나하나를 구성하고 있습니다...</p>
+        <p className="mt-6 text-xl text-slate-300 font-medium">
+          {lang === 'ko' ? '장면 하나하나를 구성하고 있습니다...' : 'Composing scenes...'}
+        </p>
       </div>
     );
   }
@@ -82,9 +90,11 @@ const Step4Storyboard: React.FC<Step4StoryboardProps> = ({
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-3xl font-bold flex items-center gap-2">
-            <span className="text-indigo-400">#4</span> 콘티 생성
+            <span className="text-indigo-400">#4</span> {lang === 'ko' ? '콘티 생성' : 'Storyboard'}
           </h2>
-          <p className="text-slate-400 mt-1">뮤직비디오의 흐름을 보여주는 장면 리스트입니다.</p>
+          <p className="text-slate-400 mt-1">
+            {lang === 'ko' ? '뮤직비디오의 흐름을 보여주는 장면 리스트입니다.' : 'Scene list showing the flow of the music video.'}
+          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -106,7 +116,7 @@ const Step4Storyboard: React.FC<Step4StoryboardProps> = ({
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
-            재생성
+            {lang === 'ko' ? '재생성' : 'Regenerate'}
           </button>
         </div>
       </div>
@@ -118,55 +128,61 @@ const Step4Storyboard: React.FC<Step4StoryboardProps> = ({
       )}
 
       <div className="flex-1 overflow-y-auto pb-4 pr-2 space-y-4">
-        {scenes.map((scene, index) => (
-          <div key={index} className="bg-slate-800/40 border border-slate-700 rounded-xl overflow-hidden hover:bg-slate-800/60 transition-colors">
-            <div className="flex flex-col md:flex-row">
-              <div className="bg-slate-900/50 p-4 flex flex-col justify-center items-center w-full md:w-32 border-b md:border-b-0 md:border-r border-slate-700">
-                <span className="text-slate-500 text-xs uppercase font-bold tracking-widest mb-1">Scene</span>
-                <span className="text-3xl font-bold text-white">{scene.sceneNumber}</span>
-                <div className="flex items-center gap-1 mt-2 text-indigo-400 text-xs font-mono bg-indigo-500/10 px-2 py-0.5 rounded">
-                  <Clock className="w-3 h-3" />
-                  {scene.estimatedDuration}
-                </div>
-              </div>
-              
-              <div className="p-5 flex-1 space-y-3">
-                <div className="flex items-start gap-3">
-                   <div className="bg-indigo-500/10 p-2 rounded text-indigo-400 mt-0.5">
-                     <Clapperboard className="w-5 h-5" />
-                   </div>
-                   <div className="flex-1">
-                     <h4 className="text-sm font-semibold text-indigo-200 mb-1">Visual Action</h4>
-                     <p className="text-slate-100">{scene.visualAction}</p>
-                   </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="bg-purple-500/10 p-2 rounded text-purple-400 mt-0.5">
-                    <Video className="w-5 h-5" />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
-                    <div>
-                      <h4 className="text-xs font-semibold text-slate-500 uppercase mb-0.5">Camera</h4>
-                      <p className="text-slate-300 text-sm">{scene.cameraMovement}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-semibold text-slate-500 uppercase mb-0.5">Mood & Lighting</h4>
-                      <p className="text-slate-300 text-sm">{scene.moodAndLighting}</p>
-                    </div>
+        {scenes.map((scene, index) => {
+          const visual = getLocalized(scene, 'visualAction', lang);
+          const mood = getLocalized(scene, 'moodAndLighting', lang);
+          const camera = getLocalized(scene, 'cameraMovement', lang);
+          
+          return (
+            <div key={index} className="bg-slate-800/40 border border-slate-700 rounded-xl overflow-hidden hover:bg-slate-800/60 transition-colors">
+              <div className="flex flex-col md:flex-row">
+                <div className="bg-slate-900/50 p-4 flex flex-col justify-center items-center w-full md:w-32 border-b md:border-b-0 md:border-r border-slate-700">
+                  <span className="text-slate-500 text-xs uppercase font-bold tracking-widest mb-1">Scene</span>
+                  <span className="text-3xl font-bold text-white">{scene.sceneNumber}</span>
+                  <div className="flex items-center gap-1 mt-2 text-indigo-400 text-xs font-mono bg-indigo-500/10 px-2 py-0.5 rounded">
+                    <Clock className="w-3 h-3" />
+                    {scene.estimatedDuration}
                   </div>
                 </div>
+                
+                <div className="p-5 flex-1 space-y-3">
+                  <div className="flex items-start gap-3">
+                     <div className="bg-indigo-500/10 p-2 rounded text-indigo-400 mt-0.5">
+                       <Clapperboard className="w-5 h-5" />
+                     </div>
+                     <div className="flex-1">
+                       <h4 className="text-sm font-semibold text-indigo-200 mb-1">Visual Action</h4>
+                       <p className="text-slate-100">{visual}</p>
+                     </div>
+                  </div>
 
-                <div className="mt-2 bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
-                  <p className="text-slate-400 text-sm italic">
-                    <span className="text-slate-500 font-semibold not-italic mr-2">♪ Lyrics:</span>
-                    "{scene.lyricsSegment}"
-                  </p>
+                  <div className="flex items-start gap-3">
+                    <div className="bg-purple-500/10 p-2 rounded text-purple-400 mt-0.5">
+                      <Video className="w-5 h-5" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-500 uppercase mb-0.5">Camera</h4>
+                        <p className="text-slate-300 text-sm">{camera}</p>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-semibold text-slate-500 uppercase mb-0.5">Mood & Lighting</h4>
+                        <p className="text-slate-300 text-sm">{mood}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
+                    <p className="text-slate-400 text-sm italic">
+                      <span className="text-slate-500 font-semibold not-italic mr-2">♪ Lyrics:</span>
+                      "{scene.lyricsSegment}"
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-8 flex justify-end">
@@ -174,7 +190,7 @@ const Step4Storyboard: React.FC<Step4StoryboardProps> = ({
           onClick={onNext}
           className="px-8 py-3 rounded-lg font-semibold text-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg hover:shadow-indigo-500/30 hover:scale-105 transition-all"
         >
-          이미지 프롬프트 생성하기 →
+          {lang === 'ko' ? '세부 콘티 생성하기 →' : 'Generate Detailed Script →'}
         </button>
       </div>
     </div>

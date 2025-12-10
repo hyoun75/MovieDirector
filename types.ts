@@ -31,17 +31,36 @@ export interface Character {
   visualDescription: string;
   personality: string;
   outfit: string;
+  keywords?: string[]; 
+  // Bilingual support
+  name_ko?: string;
+  name_en?: string;
+  role_ko?: string;
+  role_en?: string;
+  visualDescription_ko?: string;
+  visualDescription_en?: string;
+  personality_ko?: string;
+  personality_en?: string;
+  outfit_ko?: string;
+  outfit_en?: string;
 }
 
 export interface Scene {
   sceneNumber: number;
-  lyricsSegment: string; // The lyrics corresponding to this scene
+  lyricsSegment: string; 
   visualAction: string;
   moodAndLighting: string;
   cameraMovement: string;
   estimatedDuration: string;
-  imagePrompt?: string; // Added in step 6
-  videoPrompt?: string; // Added in step 7
+  imagePrompt?: string; 
+  videoPrompt?: string; 
+  // Bilingual support
+  visualAction_ko?: string;
+  visualAction_en?: string;
+  moodAndLighting_ko?: string;
+  moodAndLighting_en?: string;
+  cameraMovement_ko?: string;
+  cameraMovement_en?: string;
 }
 
 export interface AppState {
@@ -60,4 +79,14 @@ export const INITIAL_STATE: AppState = {
   selectedStoryIndex: null,
   characters: [],
   scenes: []
+};
+
+// Helper to get localized text
+// Fallbacks: field_lang -> field -> empty string
+export const getLocalized = (obj: any, field: string, lang: 'ko' | 'en'): string => {
+  if (!obj) return '';
+  const val = obj[`${field}_${lang}`];
+  if (val) return val;
+  // Fallback to the default field if localized one is missing
+  return obj[field] || '';
 };

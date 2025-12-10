@@ -1,16 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
-import { Scene } from '../types';
+import { Scene, getLocalized } from '../types';
 import { generateVideoPrompts } from '../services/geminiService';
 import { Film, RefreshCw, Copy, Check, Download, FileText } from 'lucide-react';
 
 interface Step6VideoPromptsProps {
+  lang: 'ko' | 'en';
   scenes: Scene[];
   setScenes: (scenes: Scene[]) => void;
   onDownloadFull: () => void;
 }
 
 const Step6VideoPrompts: React.FC<Step6VideoPromptsProps> = ({
+  lang,
   scenes,
   setScenes,
   onDownloadFull
@@ -26,7 +28,7 @@ const Step6VideoPrompts: React.FC<Step6VideoPromptsProps> = ({
       const result = await generateVideoPrompts(scenes);
       setScenes(result);
     } catch (err) {
-      setError('동영상 프롬프트를 생성하는 중 오류가 발생했습니다.');
+      setError(lang === 'ko' ? '동영상 프롬프트를 생성하는 중 오류가 발생했습니다.' : 'Error generating video prompts.');
     } finally {
       setLoading(false);
     }
@@ -67,7 +69,9 @@ const Step6VideoPrompts: React.FC<Step6VideoPromptsProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-[500px]">
         <div className="w-16 h-16 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
-        <p className="mt-6 text-xl text-slate-300 font-medium">카메라 무빙과 모션을 포함한 영상 프롬프트를 작성 중입니다...</p>
+        <p className="mt-6 text-xl text-slate-300 font-medium">
+          {lang === 'ko' ? '카메라 무빙과 모션을 포함한 영상 프롬프트를 작성 중입니다...' : 'Generating video prompts with camera motion...'}
+        </p>
       </div>
     );
   }
@@ -77,9 +81,11 @@ const Step6VideoPrompts: React.FC<Step6VideoPromptsProps> = ({
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-3xl font-bold flex items-center gap-2">
-            <span className="text-indigo-400">#7</span> 동영상 프롬프트 (완료)
+            <span className="text-indigo-400">#7</span> {lang === 'ko' ? '동영상 프롬프트 (완료)' : 'Video Prompts (Final)'}
           </h2>
-          <p className="text-slate-400 mt-1">Sora, Veo, Runway 등에서 사용할 수 있는 영상 생성 프롬프트입니다.</p>
+          <p className="text-slate-400 mt-1">
+            {lang === 'ko' ? 'Sora, Veo, Runway 등에서 사용할 수 있는 영상 생성 프롬프트입니다.' : 'Prompts for Sora, Veo, Runway, etc.'}
+          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -101,7 +107,7 @@ const Step6VideoPrompts: React.FC<Step6VideoPromptsProps> = ({
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
-            재생성
+            {lang === 'ko' ? '재생성' : 'Regenerate'}
           </button>
         </div>
       </div>
@@ -153,7 +159,9 @@ const Step6VideoPrompts: React.FC<Step6VideoPromptsProps> = ({
       </div>
       
       <div className="mt-8 text-center">
-         <p className="text-slate-500 text-sm">모든 과정이 완료되었습니다! 언제든지 이전 단계를 클릭하여 내용을 수정할 수 있습니다.</p>
+         <p className="text-slate-500 text-sm">
+           {lang === 'ko' ? '모든 과정이 완료되었습니다! 언제든지 이전 단계를 클릭하여 내용을 수정할 수 있습니다.' : 'All steps completed! You can click previous steps to edit content anytime.'}
+         </p>
       </div>
     </div>
   );
